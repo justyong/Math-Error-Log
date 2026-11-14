@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수학 오답노트</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:18px;color:#222;background:#f7f8fb}
+header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e3e6ee;padding:10px 12px;z-index:5}
+h1{font-size:20px;margin:0 0 8px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+main{max-width:560px;margin:0 auto;padding:16px}
+h2{font-size:22px;margin:8px 0 12px}
+.note{font-size:15px;color:#5a6273;line-height:1.5}
+button{font:inherit;cursor:pointer}
+.tab{min-height:44px;padding:0 12px;border:1px solid #c8cfdd;border-radius:10px;background:#fff}
+.tab.on{background:#3b6fd8;color:#fff;border-color:#3b6fd8}
+.big{display:block;width:100%;min-height:56px;margin:12px 0;border:none;border-radius:14px;background:#3b6fd8;color:#fff;font-size:20px}
+.big:disabled{background:#b9c3d6;cursor:default}
+.sm{min-height:44px;padding:0 12px;border:1px solid #c8cfdd;border-radius:10px;background:#fff}
+.sm.pri{background:#3b6fd8;color:#fff;border-color:#3b6fd8}
+.card{background:#fff;border:1px solid #e3e6ee;border-radius:14px;padding:14px;margin:10px 0}
+.card.done{opacity:.6}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:6px 0}
+.tag{background:#eaf0fc;color:#2a4fa0;border-radius:8px;padding:4px 8px;font-size:15px}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px}
+input,select{min-height:44px;font-size:16px;padding:8px 10px;border:1px solid #c8cfdd;border-radius:10px;background:#fff}
+input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;margin:0}
+input[type=password],input[type=number]{width:100%}
+input[type=file]{width:100%;min-height:56px;padding:12px;font-size:16px}
+label{display:block;margin:10px 0}
+.choice{display:block;width:100%;text-align:left;min-height:48px;margin:6px 0;padding:10px 12px;border:2px solid #c8cfdd;border-radius:12px;background:#fff;font-size:18px}
+.choice.sel{border-color:#3b6fd8;background:#eef3ff}
+.choice.right{border-color:#2e8b57;background:#e8f7ee}
+.choice.wrong{border-color:#d9534f;background:#fdecea}
+.q{background:#fff;border-radius:14px;padding:14px;margin:12px 0;border:1px solid #e3e6ee}
+.qtext{white-space:pre-wrap;line-height:1.6}
+.explain{white-space:pre-wrap;background:#f4f6fb;border-radius:10px;padding:10px;line-height:1.6;margin-top:8px}
+.verdict{font-weight:bold;margin:8px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:12px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>수학 오답노트</h1>
+  <nav>
+    <button class="tab" data-go="notes">오답</button>
+    <button class="tab" data-go="upload">등록</button>
+    <button class="tab" data-go="random">랜덤</button>
+    <button class="tab" data-go="records">기록</button>
+    <button class="tab" data-go="settings">설정</button>
+  </nav>
+</header>
+<main id="app"></main>
+<div id="toast" role="status"></div>
+
+<script>
+const KEY_KEYS = 'mel_apikeys';
+const KEY_DATA = 'mel_data';
+// 모델 이름은 나중에 바뀔 수 있어 여기서만 관리합니다. (확인 필요)
+const CFG = { GEMINI_MODEL: 'gemini-2.5-flash', CLAUDE_MODEL: 'claude-sonnet-5-5' };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, f) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (e) { return f; } },
+  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+};
+const load = () => { const d = store.get(KEY_DATA, null) || {}; return { problems: d.problems || [], types: d.types || [], sets: d.sets || [] }; };
+const saveData = (d) => store.set(KEY_DATA, d);
+const getKeys = () => store.get(KEY_KEYS, { gemini: '', claude: '' });
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const today = () => new Date().toISOString().slice(0, 10);
+const addType = (d, t) => { if (t && !d.types.includes(t)) d.types.push(t); };
+
+let state = { view: 'notes', filter: '전체', randomTypes: null, randomCount: 10, session: null };
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ---------- AI 호출 ----------
+const CLASSIFY_PROMPT = (types) => `수학 문제 사진을 읽고 아래 JSON 형식으로만 답하세요. 다른 말은 쓰지 마세요.
+{"question":"문제 본문 (수식은 일반 문자로: x², ÷, √)","choices":["①…","②…","③…","④…","⑤…"],"answer_index":0,"type":"문제 유형 이름 (짧은 한국어)","summary":"핵심 정답을 한 줄로","explanation":"풀이 과정을 단계별로 짧게. 교과 용어 사용","hints":["힌트1: 방향만","힌트2: 식 세우기","힌트3: 계산 직전"]}
+규칙: answer_index는 정답 보기의 번호(0~4). 사진에 보기가 없으면 5지선다 보기를 새로 만들고 정답 1개를 포함하세요. 기존 유형이 맞으면 같은 이름을 쓰세요. 기존 유형: ${types.join(', ') || '없음'}`;
+
+const SIMILAR_PROMPT = (p) => `아래 문제와 같은 유형, 같은 개념의 유사문제를 1개 만드세요. 숫자와 조건만 바꾸고 난이도는 비슷하게 하세요. JSON 형식으로만 답하세요.
+{"question":"","choices":["①…","②…","③…","④…","⑤…"],"answer_index":0,"explanation":"풀이를 단계별로 짧게","hints":["힌트1","힌트2","힌트3"]}
+원본 문제: ${p.question}
+원본 보기: ${p.choices.join(' ')}`;
+
+function parseJson(t) { const s = t.indexOf('{'), e = t.lastIndexOf('}'); return JSON.parse(t.slice(s, e + 1)); }
+
+async function callGemini(prompt, b64) {
+  const key = getKeys().gemini;
+  if (!key) throw new Error('설정에서 Gemini 키를 먼저 입력하세요.');
+  const parts = [{ text: prompt }];
+  if (b64) parts.unshift({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${CFG.GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }),
+  });
+  if (!r.ok) throw new Error('Gemini 호출 실패 (' + r.status + '). 키와 모델 이름을 확인하세요.');
+  const j = await r.json();
+  return parseJson(j.candidates[0].content.parts[0].text);
+}
+
+async function callClaude(prompt) {
+  const key = getKeys().claude;
+  if (!key) throw new Error('설정에서 Claude 키를 먼저 입력하세요.');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model: CFG.CLAUDE_MODEL, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+  });
+  if (!r.ok) throw new Error('Claude 호출 실패 (' + r.status + ').');
+  const j = await r.json();
+  return parseJson(j.content[0].text);
+}
+
+// 사진을 적당한 크기의 JPEG로 줄여서 base64로 반환
+async function fileToJpegBase64(file) {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+  const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(url);
+  return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+}
+
+// 문제 텍스트 유사도 (글자 2개씩 묶어서 비교). 0.8 이상이면 같은 문제로 봄
+function similarity(a, b) {
+  const n = (s) => String(s).replace(/\s/g, '');
+  a = n(a); b = n(b);
+  if (!a || !b) return 0;
+  const grams = (s) => { const g = new Set(); for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i + 2)); return g; };
+  const A = grams(a), B = grams(b);
+  let inter = 0; A.forEach((x) => { if (B.has(x)) inter++; });
+  return inter / ((A.size + B.size - inter) || 1);
+}
+
+// ---------- 동작 ----------
+async function handleUpload(file) {
+  const status = $('upload-status');
+  status.textContent = '사진을 읽고 유형을 찾는 중입니다...';
+  try {
+    const b64 = await fileToJpegBase64(file);
+    const d = load();
+    const res = await callGemini(CLASSIFY_PROMPT(d.types), b64);
+    const dup = d.problems.find((p) => similarity(p.question, res.question) >= 0.8);
+    if (dup) {
+      dup.wrongCount++; dup.correctStreak = 0; dup.graduated = false;
+      saveData(d);
+      status.textContent = `이미 있던 문제예요. [${dup.type}] 틀린 횟수 ${dup.wrongCount}번으로 기록했어요.`;
+    } else {
+      addType(d, res.type);
+      d.problems.push({
+        id: uid(), type: res.type, question: res.question, choices: res.choices || [],
+        answer_index: res.answer_index, summary: res.summary || '', explanation: res.explanation || '',
+        hints: res.hints || [], wrongCount: 1, correctStreak: 0, graduated: false, createdAt: Date.now(),
+      });
+      saveData(d);
+      status.textContent = `[${res.type}] 유형으로 저장했어요.`;
+    }
+  } catch (e) {
+    status.textContent = e.message || '오류가 발생했어요.';
+  }
+}
+
+function retypeProblem(id, val) {
+  const d = load();
+  const p = d.problems.find((x) => x.id === id);
+  if (!p) return;
+  let t = val;
+  if (val === '__new__') {
+    t = (prompt('새 유형 이름을 입력하세요') || '').trim();
+    if (!t) { render(); return; }
+  }
+  p.type = t; addType(d, t); saveData(d); render();
+}
+
+function deleteProblem(id) {
+  if (!confirm('이 오답을 삭제할까요?')) return;
+  const d = load();
+  d.problems = d.problems.filter((p) => p.id !== id);
+  saveData(d); render();
+}
+
+function startRetake(id) {
+  const p = load().problems.find((x) => x.id === id);
+  if (!p) return;
+  state.session = { mode: 'retake', items: [p], answers: {}, hints: {}, open: {}, graded: false };
+  go('session');
+}
+
+function startRandom() {
+  const d = load();
+  const sel = state.randomTypes ?? d.types;
+  const pool = d.problems.filter((p) => !p.graduated && sel.includes(p.type));
+  if (!pool.length) { toast('선택한 유형에 출제할 오답이 없어요.'); return; }
+  const count = Math.min(state.randomCount, pool.length);
+  const picked = [], used = {};
+  let rest = [...pool];
+  while (picked.length < count && rest.length) {
+    // 틀린 횟수가 많을수록 확률이 높고, 같은 유형이 많이 나온 만큼 확률을 낮춤
+    const w = rest.map((p) => Math.max(1, p.wrongCount) / (1 + (used[p.type] || 0) * 2));
+    const total = w.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, idx = 0;
+    for (; idx < w.length - 1; idx++) { r -= w[idx]; if (r <= 0) break; }
+    const item = rest.splice(idx, 1)[0];
+    picked.push(item);
+    used[item.type] = (used[item.type] || 0) + 1;
+  }
+  state.session = { mode: 'random', items: picked, answers: {}, hints: {}, open: {}, graded: false };
+  go('session');
+}
+
+async function startSimilar(i) {
+  const base = state.session.items[i];
+  try {
+    toast('유사문제를 만드는 중입니다...');
+    const s = await callClaude(SIMILAR_PROMPT(base));
+    const item = { id: 'sim', type: base.type, question: s.question, choices: s.choices || [], answer_index: s.answer_index, explanation: s.explanation || '', hints: s.hints || [], summary: '' };
+    state.session = { mode: 'similar', items: [item], answers: {}, hints: {}, open: {}, graded: false };
+    render();
+  } catch (e) { toast(e.message); }
+}
+
+function gradeSession() {
+  const s = state.session, n = s.items.length;
+  if (Object.keys(s.answers).length < n) { toast('모든 문제의 답을 골라 주세요.'); return; }
+  const d = load();
+  let score = 0;
+  s.items.forEach((it, i) => {
+    const ok = s.answers[i] === it.answer_index;
+    if (ok) score++;
+    if (s.mode === 'similar') return;
+    const p = d.problems.find((x) => x.id === it.id);
+    if (!p) return;
+    if (ok) { p.correctStreak++; if (p.correctStreak >= 2) p.graduated = true; }
+    else { p.correctStreak = 0; p.wrongCount++; }
+  });
+  if (s.mode === 'random') d.sets.push({ date: today(), score, total: n, at: Date.now() });
+  if (s.mode !== 'similar') saveData(d);
+  s.score = score; s.graded = true;
+  render();
+}
+
+function finishSession() { state.session = null; go('notes'); }
+
+function saveKeys() {
+  store.set(KEY_KEYS, { gemini: $('key-gemini').value.trim(), claude: $('key-claude').value.trim() });
+  toast('이 기기에 저장되었습니다.');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'math-error-log-' + today() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+async function importData(file) {
+  try {
+    const j = JSON.parse(await file.text());
+    if (!Array.isArray(j.problems) || !Array.isArray(j.types) || !Array.isArray(j.sets)) throw new Error('파일 형식이 맞지 않아요.');
+    saveData({ problems: j.problems, types: j.types, sets: j.sets });
+    toast('불러왔어요.'); render();
+  } catch (e) { toast(e.message || '불러오기에 실패했어요.'); }
+}
+
+// ---------- 화면 ----------
+const typeOptions = (types, selected) => types.map((t) => `<option value="${esc(t)}" ${t === selected ? 'selected' : ''}>${esc(t)}</option>`).join('');
+
+function viewNotes() {
+  const d = load();
+  const list = d.problems
+    .filter((p) => state.filter === '전체' || p.type === state.filter)
+    .sort((a, b) => b.wrongCount - a.wrongCount || b.createdAt - a.createdAt);
+  let html = `<h2>오답 노트</h2>
+    <div class="row"><select data-change="filter"><option value="전체">전체 유형</option>${typeOptions(d.types, state.filter)}</select>
+    <span class="note">총 ${d.problems.length}개</span></div>`;
+  if (!list.length) html += `<p class="note">아직 저장된 오답이 없어요. "등록" 탭에서 사진을 올려 주세요.</p>`;
+  list.forEach((p) => {
+    html += `<article class="card ${p.graduated ? 'done' : ''}">
+      <div class="row"><span class="tag">${esc(p.type)}</span>
+      <span class="note">틀린 ${p.wrongCount}번 · 연속 정답 ${p.correctStreak}/2${p.graduated ? ' · 졸업' : ''}</span></div>
+      <p class="qtext">${esc(p.question)}</p>
+      <div class="row">
+        <button class="sm pri" data-action="retake" data-id="${p.id}">다시 풀기</button>
+        <select data-change="retype" data-id="${p.id}">${typeOptions(d.types, p.type)}<option value="__new__">+ 새 유형</option></select>
+        <button class="sm" data-action="delete" data-id="${p.id}">삭제</button>
+      </div></article>`;
+  });
+  return html;
+}
+
+function viewUpload() {
+  return `<h2>오답 등록</h2>
+    <p class="note">캡처를 밝고 선명하게 찍을수록 정확해요. 한 장에 문제 하나를 권장합니다. 저장하면 유형은 자동으로 분류됩니다.</p>
+    <input type="file" id="file-input" accept="image/*">
+    <p id="upload-status" class="note"></p>`;
+}
+
+function viewRandom() {
+  const d = load();
+  if (!d.types.length) return `<h2>랜덤 세트</h2><p class="note">먼저 "등록"에서 오답을 올려 주세요.</p>`;
+  const sel = state.randomTypes ?? d.types;
+  const allOn = d.types.every((t) => sel.includes(t));
+  const pool = d.problems.filter((p) => !p.graduated && sel.includes(p.type)).length;
+  let html = `<h2>랜덤 세트</h2>
+    <label class="chk"><input type="checkbox" data-all="1" ${allOn ? 'checked' : ''}> 전체</label>`;
+  d.types.forEach((t) => {
+    html += `<label class="chk"><input type="checkbox" data-type="${esc(t)}" ${sel.includes(t) ? 'checked' : ''}> ${esc(t)}</label>`;
+  });
+  html += `<label>문제 수 (3~30)<input type="number" min="3" max="30" value="${state.randomCount}" data-change="count"></label>
+    <p class="note">선택한 유형에서 아직 졸업하지 않은 오답 ${pool}개 중에서 뽑습니다. 많이 틀린 문제가 더 자주 나오고, 유형은 골고루 섞입니다.</p>
+    <button class="big" data-action="start-random" ${pool ? '' : 'disabled'}>랜덤 세트 시작</button>`;
+  return html;
+}
+
+function viewSession() {
+  const s = state.session;
+  if (!s) return `<h2>풀이</h2><p class="note">진행 중인 풀이가 없어요.</p><button class="big" data-go="notes">오답 노트로</button>`;
+  const title = { retake: '다시 풀기', random: '랜덤 세트', similar: '유사문제' }[s.mode];
+  let html = `<h2>${title}</h2>`;
+  if (s.graded) {
+    html += `<div class="card"><p class="verdict">점수 ${s.score} / ${s.items.length}</p>
+      <p class="note">${s.mode === 'similar' ? '유사문제는 기록되지 않아요.' : '틀린 횟수와 졸업 상태가 오답 노트에 반영되었어요.'}</p></div>`;
+  }
+  s.items.forEach((it, i) => {
+    const pick = s.answers[i];
+    html += `<section class="q"><p class="note">${i + 1}번 · ${esc(it.type || '')}</p><p class="qtext">${esc(it.question)}</p>`;
+    (it.choices || []).forEach((c, ci) => {
+      let cls = 'choice';
+      if (pick === ci) cls += ' sel';
+      if (s.graded) { if (ci === it.answer_index) cls += ' right'; else if (pick === ci) cls += ' wrong'; }
+      html += `<button class="${cls}" data-action="pick" data-i="${i}" data-c="${ci}" ${s.graded ? 'disabled' : ''}>${esc(c)}</button>`;
+    });
+    if (s.graded) {
+      const ok = pick === it.answer_index;
+      html += `<p class="verdict">${ok ? '정답이에요!' : '아쉬워요. 해설을 함께 확인해 봐요.'}</p>
+        <button class="sm" data-action="explain" data-i="${i}">해설 ${s.open[i] ? '접기' : '펼치기'}</button>`;
+      if (s.open[i]) html += `<div class="explain">${esc(it.summary ? it.summary + '\n\n' : '')}${esc(it.explanation)}</div>`;
+      if (s.mode === 'retake') html += ` <button class="sm pri" data-action="similar" data-i="${i}">유사문제</button>`;
+    } else {
+      const shown = s.hints[i] || 0, total = (it.hints || []).length;
+      html += `<button class="sm" data-action="hint" data-i="${i}" ${shown >= total ? 'disabled' : ''}>힌트 ${shown}/${total}</button>`;
+      for (let h = 0; h < shown; h++) html += `<p class="note">힌트 ${h + 1}: ${esc(it.hints[h])}</p>`;
+    }
+    html += `</section>`;
+  });
+  html += s.graded
+    ? `<button class="big" data-action="finish">목록으로</button>`
+    : `<button class="big" data-action="grade">채점하기</button>`;
+  return html;
+}
+
+function viewRecords() {
+  const d = load();
+  let html = `<h2>세트 기록</h2>`;
+  if (!d.sets.length) html += `<p class="note">아직 완료한 랜덤 세트가 없어요.</p>`;
+  [...d.sets].reverse().forEach((r) => {
+    html += `<div class="card"><div class="row"><span>${esc(r.date)}</span><strong>${r.score} / ${r.total}</strong></div></div>`;
+  });
+  html += `<h2>백업</h2>
+    <p class="note">오답과 세트 기록을 파일로 내보내거나 불러올 수 있어요. API 키는 포함되지 않습니다.</p>
+    <button class="big" data-action="export">파일로 내보내기</button>
+    <label>불러오기 (파일 선택)<input type="file" id="import-file" accept="application/json"></label>`;
+  return html;
+}
+
+function viewSettings() {
+  const k = getKeys();
+  return `<h2>API 키 설정</h2>
+    <p class="note">키는 이 기기 브라우저에만 저장되며 외부 서버로 보내지 않습니다. 다른 기기에서는 각자 키를 입력해 주세요.</p>
+    <label>Gemini 키<input id="key-gemini" type="password" autocomplete="off" value="${esc(k.gemini)}"></label>
+    <label>Claude 키<input id="key-claude" type="password" autocomplete="off" value="${esc(k.claude)}"></label>
+    <button class="big" data-action="save-keys">저장</button>`;
+}
+
+const VIEWS = { notes: viewNotes, upload: viewUpload, random: viewRandom, session: viewSession, records: viewRecords, settings: viewSettings };
+
+function render() {
+  $('app').innerHTML = VIEWS[state.view]();
+  document.querySelectorAll('nav .tab').forEach((b) => b.classList.toggle('on', b.dataset.go === state.view));
+}
+function go(v) { state.view = v; render(); window.scrollTo(0, 0); }
+
+// ---------- 이벤트 ----------
+document.addEventListener('click', async (e) => {
+  const nav = e.target.closest('[data-go]');
+  if (nav) { go(nav.dataset.go); return; }
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  const a = b.dataset.action, i = Number(b.dataset.i), s = state.session;
+  switch (a) {
+    case 'retake': startRetake(b.dataset.id); break;
+    case 'delete': deleteProblem(b.dataset.id); break;
+    case 'start-random': startRandom(); break;
+    case 'pick': if (s && !s.graded) { s.answers[i] = Number(b.dataset.c); render(); } break;
+    case 'hint': if (s) { s.hints[i] = (s.hints[i] || 0) + 1; render(); } break;
+    case 'explain': if (s) { s.open[i] = !s.open[i]; render(); } break;
+    case 'grade': gradeSession(); break;
+    case 'similar': await startSimilar(i); break;
+    case 'finish': finishSession(); break;
+    case 'save-keys': saveKeys(); break;
+    case 'export': exportData(); break;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.id === 'file-input' && t.files[0]) handleUpload(t.files[0]);
+  else if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
+  else if (t.dataset.change === 'filter') { state.filter = t.value; render(); }
+  else if (t.dataset.change === 'retype') retypeProblem(t.dataset.id, t.value);
+  else if (t.dataset.change === 'count') { state.randomCount = Math.min(30, Math.max(3, Number(t.value) || 10)); render(); }
+  else if (t.dataset.all !== undefined) { const d = load(); state.randomTypes = t.checked ? [...d.types] : []; render(); }
+  else if (t.dataset.type !== undefined) {
+    const d = load();
+    const cur = new Set(state.randomTypes ?? d.types);
+    t.checked ? cur.add(t.dataset.type) : cur.delete(t.dataset.type);
+    state.randomTypes = [...cur]; render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
