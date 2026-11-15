@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수학 오답노트</title>
+<style>
+:root{--cream:#fff8e8;--card:#fffdf7;--ink:#3b3a36;--muted:#8a8374;--brand:#f08a4b;--brand-dark:#c96b33;--line:#efe2c4}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;font-size:17px;color:var(--ink);background:linear-gradient(#fff1cf,var(--cream) 320px)}
+header{position:sticky;top:0;background:rgba(255,253,247,.94);backdrop-filter:blur(6px);padding:12px;z-index:5;box-shadow:0 2px 0 var(--line)}
+h1{font-size:22px;margin:0 0 8px;color:#e07a3c;font-weight:800}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+main{max-width:720px;margin:0 auto;padding:16px}
+h2{font-size:21px;margin:20px 0 10px;font-weight:800}
+.note{font-size:14px;color:var(--muted);line-height:1.5;margin:4px 0}
+button{font:inherit;cursor:pointer;transition:transform .05s}
+button:active{transform:translateY(2px)}
+.tab{min-height:44px;padding:0 14px;border:none;border-radius:999px;background:#fff;box-shadow:0 3px 0 #eadbbb;font-weight:700;color:var(--ink)}
+.tab.on{background:var(--brand);color:#fff;box-shadow:0 3px 0 var(--brand-dark)}
+.big{display:block;width:100%;min-height:58px;margin:14px 0;border:none;border-radius:20px;background:var(--brand);color:#fff;font-size:19px;font-weight:800;box-shadow:0 5px 0 var(--brand-dark)}
+.big:disabled{background:#d8cfbc;box-shadow:0 5px 0 #c4baa6;cursor:default}
+.sm{min-height:44px;padding:0 14px;border:none;border-radius:14px;background:#fff;box-shadow:0 3px 0 #eadbbb;font-weight:600;color:var(--ink)}
+.sm.pri{background:var(--brand);color:#fff;box-shadow:0 3px 0 var(--brand-dark)}
+.sm:disabled{opacity:.5}
+.card{background:var(--card);border-radius:22px;padding:16px;margin:12px 0;box-shadow:0 4px 0 var(--line)}
+.card.done{opacity:.6}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:6px 0}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px;background:var(--card);border-radius:14px;padding:0 12px;margin:6px 0;box-shadow:0 2px 0 var(--line)}
+input,select{min-height:44px;font-size:16px;padding:8px 12px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;margin:0;accent-color:var(--brand)}
+input[type=password],input[type=number]{width:100%}
+input[type=file]{width:100%;min-height:58px;padding:12px;font-size:16px;background:#fff;border-radius:18px}
+label{display:block;margin:10px 0;font-weight:600}
+.choice{display:block;width:100%;text-align:left;min-height:50px;margin:8px 0;padding:10px 14px;border:2px solid var(--line);border-radius:16px;background:#fff;font-size:18px}
+.choice.sel{border-color:var(--brand);background:#fff1e6}
+.choice.right{border-color:#4caf7a;background:#e6f7ec}
+.choice.wrong{border-color:#e4735f;background:#fdebe6}
+.q{background:var(--card);border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 4px 0 var(--line)}
+.qtext{white-space:pre-wrap;line-height:1.7}
+.explain{white-space:pre-wrap;background:#fff5e0;border-radius:16px;padding:12px;line-height:1.7;margin-top:10px}
+.verdict{font-weight:800;margin:8px 0;font-size:18px}
+.bar{height:14px;background:#f3ead6;border-radius:999px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;background:linear-gradient(90deg,#ffb36b,var(--brand));border-radius:999px;transition:width .5s}
+.level{font-size:20px;font-weight:800}
+details{background:var(--card);border-radius:22px;margin:12px 0;padding:4px 16px 12px;box-shadow:0 4px 0 var(--line)}
+summary{cursor:pointer;min-height:52px;display:flex;align-items:center;font-weight:800;font-size:19px}
+.minor{margin:14px 0 4px;color:#b06a2c;font-weight:800}
+.logline{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.logline:last-child{border-bottom:none}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a4236;color:#fff;padding:12px 18px;border-radius:18px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center;z-index:10;font-weight:600}
+#toast.show{opacity:1}
+
+/* ----- 현황 화면 (카드형 대시보드) ----- */
+.greet{font-size:17px;font-weight:800;color:#7a5a1e;margin:4px 2px 0}
+.hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,#ffe9a6,#ffd5b0);border-radius:26px;padding:18px;box-shadow:0 4px 0 #e8c98a;margin-top:12px}
+.hero-avatar{width:88px;height:88px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:46px;box-shadow:0 4px 0 #e7c27a;flex:none}
+.hero-info{flex:1;min-width:0}
+.hero-date{margin:0;font-size:14px;color:#8a6a2a;font-weight:600}
+.hero-title{font-size:23px;font-weight:800;margin:4px 0 8px}
+.hero-title span{display:inline-block;background:#fff;border-radius:999px;padding:2px 12px;font-size:16px;color:#e07a3c;margin-left:6px;vertical-align:middle}
+.xp-bar{height:20px;background:#fff;border-radius:999px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.08)}
+.xp-bar>div{height:100%;background:repeating-linear-gradient(-45deg,#ffd95a 0 10px,#ffbf2e 10px 20px);border-radius:999px;transition:width .5s}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px}
+.kpi{border-radius:20px;padding:14px 6px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.05)}
+.kpi b{display:block;font-size:24px;font-weight:800}
+.kpi span{font-size:14px;color:var(--muted);font-weight:600}
+.k1{background:#dff6e9}.k2{background:#dfeeff}.k3{background:#ffe6e0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wide{grid-column:1/-1}
+.cardtitle{font-weight:800;font-size:18px;margin:0 0 8px}
+.acc-row{display:flex;gap:12px;align-items:center;margin:12px 0}
+.acc-ico{width:44px;height:44px;border-radius:16px;display:grid;place-items:center;font-size:22px;flex:none}
+.acc-body{flex:1;min-width:0}
+.weekbars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:6px}
+.wb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.wb b{font-size:13px;margin-bottom:4px}
+.wb i{display:block;width:100%;background:linear-gradient(#ffd46b,#ffb36b);border-radius:12px 12px 6px 6px;min-height:6px}
+.wb small{font-size:12px;color:var(--muted);margin-top:6px}
+.stick{display:flex;flex-wrap:wrap;gap:8px}
+.stick span{width:46px;height:46px;border-radius:16px;background:#fff7d6;display:grid;place-items:center;font-size:24px;box-shadow:0 3px 0 #efdba3}
+.stickers{display:flex;flex-wrap:wrap;gap:10px;font-size:28px}
+.stickers span{display:inline-flex;align-items:center;gap:2px}
+.stickers small{font-size:14px;color:var(--muted)}
+/* 2단 레이아웃: 왼쪽 현재 상태 / 오른쪽 성장 기록 */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.char{display:grid;place-items:center;aspect-ratio:1/1;margin:12px 0 0;border-radius:26px;border:3px dashed #e0c98e;background:#fffaf0;cursor:pointer;overflow:hidden;position:relative;padding:0}
+.char img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fffaf0}
+.char .ph{text-align:center;color:var(--muted);font-weight:700;padding:12px;line-height:1.6}
+.char.has-char .ph{display:none}
+@media (max-width:640px){.cols{grid-template-columns:1fr}}
+/* 오답 화면: 왼쪽 유형 목록(좁게) / 오른쪽 문제 */
+.notes-cols{grid-template-columns:minmax(130px,1fr) 2fr}
+.major-btn{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 10px;border:none;border-radius:18px;background:var(--card);box-shadow:0 3px 0 var(--line);text-align:left;font-weight:700;color:var(--ink);font-size:16px}
+.major-btn.on{background:#fff1e6;box-shadow:0 3px 0 #f0b68f;outline:2px solid var(--brand)}
+.major-name{flex:1}
+.verify{font-size:14px;font-weight:700;color:var(--muted);background:#f6f1e4;border-radius:12px;padding:8px 10px;margin:6px 0}
+.verify.ok{color:#2e7d55;background:#e6f7ec}
+.verify.warn{color:#b5462b;background:#fdebe6}
+.ans{display:inline-flex;align-items:center;gap:6px;font-weight:700;margin:0}
+@media (max-width:640px){.notes-cols{grid-template-columns:1fr}}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>수학 오답노트</h1>
+  <nav>
+    <button class="tab" data-go="status">현황</button>
+    <button class="tab" data-go="notes">오답</button>
+    <button class="tab" data-go="upload">등록</button>
+    <button class="tab" data-go="random">평가</button>
+    <button class="tab" data-go="records">기록</button>
+    <button class="tab" data-go="settings">설정</button>
+  </nav>
+</header>
+<main id="app"></main>
+<div id="toast" role="status"></div>
+
+<script>
+const KEY_KEYS = 'mel_apikeys';
+const DATA_KEY = 'mel_data';
+// 모델은 위에서부터 순서대로 시도합니다. 실패하면 다음 모델로 넘어갑니다.
+const CFG = {
+  GEMINI_MODELS: ['gemini-flash-lite-latest', 'gemini-flash-latest'],
+  RETRY_MAX: 5,
+};
+// 대분류는 고정 목록, 중분류는 AI가 자동으로 붙임
+const MAJORS = ['수와 연산', '문자와 식', '함수', '도형', '측정', '확률과 통계', '기타'];
+const MAJOR_STYLE = {
+  '수와 연산': { icon: '🔢', color: '#ffd98a' },
+  '문자와 식': { icon: '🔤', color: '#ffc2d4' },
+  '함수': { icon: '📈', color: '#b9e6d3' },
+  '도형': { icon: '📐', color: '#bcd8ff' },
+  '측정': { icon: '📏', color: '#ffd0a8' },
+  '확률과 통계': { icon: '🎲', color: '#d9c8ff' },
+  '기타': { icon: '🧩', color: '#e2dccd' },
+};
+
+const XP = { correct: 10, wrong: 3, graduate: 30, randomSet: 20 };
+const MAX_LEVEL = 50;
+const GEMS = [
+  { name: '수정', icon: '⚪' }, { name: '자수정', icon: '🟣' }, { name: '사파이어', icon: '🔵' },
+  { name: '에메랄드', icon: '🟢' }, { name: '루비', icon: '🔴' }, { name: '토파즈', icon: '🟠' },
+  { name: '아쿠아마린', icon: '🩵' }, { name: '다이아몬드', icon: '💎' }, { name: '오팔', icon: '🌸' },
+  { name: '무지개 보석', icon: '🌈' },
+];
+const xpFor = (L) => 40 * (L - 1) + 5 * (L - 1) * L;
+
+const STICKERS = ['⭐', '🌟', '🎈', '🦄', '🐯', '🚀', '🌈', '🍀', '🎨', '🦖', '🧩', '🏅'];
+const PRAISE = ['정답! 잘했어요 👏', '좋아요, 이 문제는 이제 내 것이에요!', '완벽해요! 생각을 잘 정리했네요.', '이번에는 정확하게 맞혔어요!'];
+const COMFORT = ['괜찮아요. 틀린 문제가 제일 많이 배우는 문제예요.', '아쉬워요. 해설을 보면서 한 걸음 더 가 봐요.', '실수는 연습의 일부예요. 다시 풀면 돼요!'];
+const NET_MSG = '인터넷 연결을 확인해 주세요. (차단 앱이나 VPN이 켜져 있으면 끄고 다시 시도)';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, f) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (e) { return f; } },
+  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const load = () => {
+  const d = store.get(DATA_KEY, null) || {};
+  return {
+    problems: d.problems || [], sets: d.sets || [], stickers: d.stickers || [],
+    xp: Number(d.xp) || 0, log: d.log || [], xpLog: d.xpLog || [],
+  };
+};
+const saveData = (d) => store.set(DATA_KEY, d);
+const getKeys = () => store.get(KEY_KEYS, { gemini: '', claude: '' });
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const today = () => new Date().toISOString().slice(0, 10);
+const pick1 = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const dayKey = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+function weekKey(ts) {
+  const dt = new Date(ts);
+  dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+  return dayKey(dt);
+}
+
+// 문제 사진은 용량이 커서 IndexedDB에 따로 저장합니다 (문제 데이터와 분리)
+let dbP;
+function imageDb() {
+  if (!dbP) dbP = new Promise((res, rej) => {
+    const r = indexedDB.open('mel_images', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('img');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbP;
+}
+async function putImage(id, data) {
+  const d = await imageDb();
+  return new Promise((res, rej) => {
+    const t = d.transaction('img', 'readwrite');
+    t.objectStore('img').put(data, id);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+async function getImage(id) {
+  const d = await imageDb();
+  return new Promise((res) => {
+    const q = d.transaction('img').objectStore('img').get(id);
+    q.onsuccess = () => res(q.result || ''); q.onerror = () => res('');
+  });
+}
+async function deleteImage(id) {
+  const d = await imageDb();
+  d.transaction('img', 'readwrite').objectStore('img').delete(id);
+}
+async function loadImages() {
+  for (const el of document.querySelectorAll('img[data-img]')) {
+    const src = await getImage(el.dataset.img);
+    if (src) {
+      el.src = src; el.hidden = false;
+      if (el.parentElement) el.parentElement.classList.add('has-char');
+    }
+  }
+}
+
+function levelInfo(xp) {
+  let lv = 1;
+  while (lv < MAX_LEVEL && xp >= xpFor(lv + 1)) lv++;
+  return { xp, lv, gem: GEMS[Math.ceil(lv / 5) - 1], base: xpFor(lv), next: lv < MAX_LEVEL ? xpFor(lv + 1) : null };
+}
+
+let state = {
+  view: 'status', openMajors: new Set(), selMajor: null, randomMajors: [], randomCount: 10, session: null,
+  pendingFiles: [], uploadLog: [], uploading: false,
+  keyTest: { gemini: '', claude: '' },
+};
+let toastTimer;
+function toast(msg, ms = 3000) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ---------- AI 호출 ----------
+const CLASSIFY_PROMPT = `수학 문제 사진을 읽고 아래 JSON 형식으로만 답하세요. 다른 말은 쓰지 마세요.
+{"question":"문제 본문","choices":["①…","②…","③…","④…","⑤…"],"solved_index":0,"answer_index":0,"major":"대분류","minor":"중분류 (짧은 한국어, 예: 분수의 덧셈, 소금물 농도, 이차방정식)","summary":"핵심 정답을 한 줄로","explanation":"풀이 과정을 단계별로 짧게. 교과 용어 사용","hints":["힌트1: 방향만","힌트2: 식 세우기","힌트3: 계산 직전"]}
+규칙: 보기를 보기 전에 문제를 직접 풀어서, 그 계산 결과와 맞는 보기 번호를 solved_index(0~4)에 쓰세요. 그다음 사진의 실제 정답 표시를 읽어 answer_index에 쓰세요. 두 값이 다르면 둘 다 그대로 쓰세요. 수식은 반드시 $...$ 안에 LaTeX로 쓰세요. 예: $x^{2}$, $\\frac{1}{2}$, $\\pi$, $3 \\div 2$, $\\sqrt{3}$. JSON 문자열 안에서는 백슬래시를 두 번(\\\\) 쓰세요. major는 반드시 다음 중 하나: ${MAJORS.join(', ')}. minor는 너무 세세하지 않게 중분류 수준으로 쓰세요. answer_index는 정답 보기 번호(0~4). 사진에 보기가 없으면 5지선다 보기를 새로 만들고 정답 1개를 포함하세요.`;
+
+const SIMILAR_PROMPT = (p) => `아래 문제와 같은 유형, 같은 개념의 유사문제를 1개 만드세요. 숫자와 조건만 바꾸고 난이도는 비슷하게 하세요. 수식은 반드시 $...$ 안에 LaTeX로 쓰세요(예: $x^{2}$, $\\frac{1}{2}$). JSON 문자열 안에서는 백슬래시를 두 번(\\\\) 쓰세요. JSON 형식으로만 답하세요.
+{"question":"","choices":["①…","②…","③…","④…","⑤…"],"answer_index":0,"explanation":"풀이를 단계별로 짧게","hints":["힌트1","힌트2","힌트3"],"figure_changes":[]}
+원본 문제: ${p.question}
+원본 보기: ${p.choices.join(' ')}`;
+
+function parseJson(t) {
+  try {
+    const s = t.indexOf('{'), e = t.lastIndexOf('}');
+    return JSON.parse(t.slice(s, e + 1));
+  } catch (e) {
+    throw new Error('AI 응답을 읽지 못했어요. 다시 시도해 주세요.');
+  }
+}
+
+async function apiError(r, name) {
+  let detail = '';
+  try { const j = await r.json(); detail = (j.error && j.error.message) || ''; } catch (e) {}
+  return new Error(`${name} 오류 (${r.status})${detail ? ' - ' + detail : ''}`);
+}
+
+// Gemini 호출: 일시적 오류(429/500/503/504, 네트워크)는 자동으로 다시 연결하고,
+// 모델이 없으면(404) 다음 모델로 넘어갑니다. 키가 틀리면(400/401/403) 바로 멈춥니다.
+async function geminiRequest(body) {
+  const key = getKeys().gemini;
+  if (!key) throw new Error('설정에서 Gemini 키를 입력하고 저장하세요.');
+  let lastErr = new Error('Gemini 연결에 실패했어요.');
+  for (const model of CFG.GEMINI_MODELS) {
+    for (let attempt = 1; attempt <= CFG.RETRY_MAX; attempt++) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (r.ok) return { json: await r.json(), model };
+        lastErr = await apiError(r, 'Gemini');
+        if ([400, 401, 403].includes(r.status)) throw lastErr;   // 키 문제: 재시도 無
+        if (r.status === 404) break;                              // 모델 없음: 다음 모델로
+      } catch (e) {
+        if (e instanceof TypeError) lastErr = new Error(NET_MSG);
+        else if (e.message && /^Gemini 오류 \(40[013]\)/.test(e.message)) throw e;
+        else lastErr = e;
+      }
+      if (attempt < CFG.RETRY_MAX) {
+        toast(`AI 연결을 다시 시도하는 중... (${attempt}/${CFG.RETRY_MAX - 1})`, 1800);
+        await sleep(3000 * attempt);
+      }
+    }
+  }
+  throw lastErr;
+}
+
+async function callGemini(prompt, b64) {
+  const parts = [{ text: prompt }];
+  if (b64) parts.unshift({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
+  const { json } = await geminiRequest({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } });
+  const txt = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts[0].text;
+  if (!txt) throw new Error('Gemini 응답이 비어 있어요. 사진을 다시 찍어 보세요.');
+  return parseJson(txt);
+}
+
+async function fileToJpegBase64(file, maxSide = 1024, quality = 0.8) {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error('이미지를 열 수 없어요. 사진 형식(HEIC 등)을 확인해 주세요.'));
+    i.src = url;
+  });
+  // 사진을 줄여서 토큰을 아낌
+  const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(url);
+  return c.toDataURL('image/jpeg', quality).split(',')[1];
+}
+
+function similarity(a, b) {
+  const n = (s) => String(s).replace(/\s/g, '');
+  a = n(a); b = n(b);
+  if (!a || !b) return 0;
+  const grams = (s) => { const g = new Set(); for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i + 2)); return g; };
+  const A = grams(a), B = grams(b);
+  let inter = 0; A.forEach((x) => { if (B.has(x)) inter++; });
+  return inter / ((A.size + B.size - inter) || 1);
+}
+
+// 실패 사유를 사람이 읽기 쉬운 말로 바꿈 (원래 오류 문구는 대괄호로 함께 표시)
+function explainError(raw = '') {
+  const r = raw || '알 수 없는 오류';
+  let why = '알 수 없는 오류가 났어요.';
+  if (/\(429\)/.test(r)) why = '요청이 너무 많아 잠시 제한됐어요. 잠시 뒤 재등록하세요.';
+  else if (/\((500|503|504)\)/.test(r)) why = 'AI 서버가 잠시 바빠요. 잠시 뒤 재등록하세요.';
+  else if (/\((400|401|403)\)/.test(r)) why = 'API 키를 확인해 주세요. (설정 탭)';
+  else if (/인터넷 연결/.test(r)) why = '인터넷 연결이 불안정해요. 연결을 확인한 뒤 재등록하세요.';
+  else if (/읽지 못/.test(r)) why = '사진을 읽지 못했어요. 밝고 선명하게 다시 찍어 주세요.';
+  return `${why} [${r}]`;
+}
+
+// ---------- 등록 ----------
+async function handleUpload(file) {
+  try {
+    const b64 = await fileToJpegBase64(file);
+    const d = load();
+    const res = await callGemini(CLASSIFY_PROMPT, b64);
+    if (!res.question) throw new Error('문제 내용을 읽지 못했어요. 사진을 더 선명하게 다시 찍어 주세요.');
+    if (!MAJORS.includes(res.major)) res.major = '기타';
+    const minor = (res.minor || '기타').trim();
+    const dup = d.problems.find((p) => similarity(p.question, res.question) >= 0.8);
+    if (dup) {
+      dup.wrongCount++; dup.correctStreak = 0; dup.graduated = false;
+      saveData(d);
+      return { ok: true, msg: `이미 있던 문제예요 → ${dup.major} > ${dup.minor}, 틀린 횟수 ${dup.wrongCount}번` };
+    }
+    // Gemini가 보기 전에 직접 푼 답(solved_index)과 읽은 정답을 비교
+    // 'ai' = 일치 / 'check' = 달라서 책 해답 확인 필요
+    const verify = (res.solved_index === res.answer_index) ? 'ai' : 'check';
+    const verifyMsg = { ai: 'AI 검증', check: '⚠️ 정답 재확인 필요 (책과 비교)' }[verify];
+    const id = uid();
+    // 그림까지 보이도록 사진을 600px로 줄여 함께 저장 (글자 인식용 원본과 별도)
+    const thumb = await fileToJpegBase64(file, 600, 0.6);
+    await putImage(id, 'data:image/jpeg;base64,' + thumb);
+    d.problems.push({
+      id, major: res.major, minor, question: res.question, choices: res.choices || [],
+      answer_index: res.answer_index, summary: res.summary || '', explanation: res.explanation || '',
+      hints: res.hints || [], wrongCount: 1, correctStreak: 0, graduated: false, createdAt: Date.now(),
+      // AI가 직접 푼 답과 읽은 정답이 같으면 'ai', 다르면 'check'(재확인 필요)
+      verify, verifiedBy: null,
+    });
+    saveData(d);
+    return { ok: true, msg: `오답으로 저장 → ${res.major} > ${minor} · ${verifyMsg}` };
+  } catch (e) {
+    return { ok: false, msg: explainError(e.message) };
+  }
+}
+
+async function startUpload() {
+  if (!state.pendingFiles.length || state.uploading) return;
+  state.uploading = true;
+  const files = state.pendingFiles;
+  state.uploadLog = files.map((f) => ({ file: f, name: f.name, state: 'wait', msg: '대기 중' }));
+  render();
+  for (let i = 0; i < files.length; i++) {
+    state.uploadLog[i].state = 'busy'; state.uploadLog[i].msg = '읽는 중...'; render();
+    const r = await handleUpload(files[i]);
+    state.uploadLog[i].state = r.ok ? 'ok' : 'err';
+    state.uploadLog[i].msg = r.msg;
+    render();
+    // 사진 사이에 잠깐 쉬어서 요청 제한에 걸리지 않도록 함
+    if (i < files.length - 1) await sleep(1500);
+  }
+  state.uploading = false;
+  state.pendingFiles = [];
+  render();
+  const okCount = state.uploadLog.filter((x) => x.state === 'ok').length;
+  toast(`${files.length}장 중 ${okCount}장 처리 완료`);
+}
+
+function setMajor(id, val) {
+  const d = load();
+  const p = d.problems.find((x) => x.id === id);
+  if (!p) return;
+  p.major = val; saveData(d); render();
+}
+
+function renameMinor(id) {
+  const d = load();
+  const p = d.problems.find((x) => x.id === id);
+  if (!p) return;
+  const t = (prompt('중분류 이름을 입력하세요', p.minor) || '').trim();
+  if (!t) return;
+  p.minor = t; saveData(d); render();
+}
+
+function deleteProblem(id) {
+  if (!confirm('이 오답을 삭제할까요?')) return;
+  const d = load();
+  d.problems = d.problems.filter((p) => p.id !== id);
+  deleteImage(id);
+  saveData(d); render();
+}
+
+// ---------- 풀이 ----------
+function startRetake(id) {
+  const p = load().problems.find((x) => x.id === id);
+  if (!p) return;
+  state.session = { mode: 'retake', items: [p], answers: {}, hints: {}, open: {}, graded: false };
+  go('session');
+}
+
+// 같은 유형에서 오답 화면에 보이는 순서대로 다음 문제 찾기
+function nextSameMajor(id) {
+  const d = load();
+  const cur = d.problems.find((p) => p.id === id);
+  if (!cur) return null;
+  const same = d.problems.filter((p) => p.major === cur.major);
+  const ordered = [...new Set(same.map((p) => p.minor))]
+    .flatMap((mi) => same.filter((p) => p.minor === mi).sort((a, b) => b.wrongCount - a.wrongCount));
+  const i = ordered.findIndex((p) => p.id === id);
+  return i >= 0 ? ordered[i + 1] || null : null;
+}
+
+function startRandom() {
+  const d = load();
+  const sel = state.randomMajors ?? MAJORS;
+  const pool = d.problems.filter((p) => !p.graduated && sel.includes(p.major));
+  if (!pool.length) { toast('선택한 대분류에 출제할 오답이 없어요.'); return; }
+  const count = Math.min(state.randomCount, pool.length);
+  const picked = [], used = {};
+  let rest = [...pool];
+  while (picked.length < count && rest.length) {
+    // 틀린 횟수가 많을수록 확률이 높고, 같은 대분류가 많이 나온 만큼 확률을 낮춤
+    const w = rest.map((p) => Math.max(1, p.wrongCount) / (1 + (used[p.major] || 0) * 2));
+    const total = w.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, idx = 0;
+    for (; idx < w.length - 1; idx++) { r -= w[idx]; if (r <= 0) break; }
+    const item = rest.splice(idx, 1)[0];
+    picked.push(item);
+    used[item.major] = (used[item.major] || 0) + 1;
+  }
+  state.session = { mode: 'random', items: picked, answers: {}, hints: {}, open: {}, graded: false };
+  go('session');
+}
+
+// 유사문제는 한 문제씩 따로 풀고, 오답 기록에는 반영하지 않습니다.
+async function makeSimilar(base) {
+  try {
+    toast('유사문제를 만드는 중입니다... (잠시 기다려 주세요)', 6000);
+    // 원본 사진(그림 포함)을 함께 보내서, 그림 조건을 글로 옮긴 유사문제를 만들게 함
+    const thumb = await getImage(base.id);
+    const prompt = SIMILAR_PROMPT(base) + (thumb ? '\n사진에 그림이 있습니다. 그림은 원본 사진을 그대로 보여 주므로 그림 모양은 바꾸지 말고, 그림 속 숫자나 길이만 바꾸세요. 바뀐 값은 figure_changes에 "항목: 원래값 → 새값" 형식으로 적으세요. 그림이 없으면 figure_changes는 빈 배열로 두세요.' : '');
+    const parts = [{ text: prompt }];
+    if (thumb) parts.unshift({ inline_data: { mime_type: 'image/jpeg', data: thumb.split(',')[1] } });
+    const { json } = await geminiRequest({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } });
+    const txt = json.candidates && json.candidates[0] && json.candidates[0].content.parts[0].text;
+    const s = parseJson(txt || '');
+    const item = { id: 'sim', imgId: thumb ? base.id : null, figChanges: s.figure_changes || [], major: base.major, minor: base.minor, question: s.question, choices: s.choices || [], answer_index: s.answer_index, explanation: s.explanation || '', hints: s.hints || [], summary: '' };
+    state.session = { mode: 'similar', items: [item], answers: {}, hints: {}, open: {}, graded: false };
+    go('session');
+  } catch (e) { toast(e.message, 4000); }
+}
+
+async function startSimilar(i) {
+  await makeSimilar(state.session.items[i]);
+}
+
+function gradeSession() {
+  const s = state.session, n = s.items.length;
+  if (Object.keys(s.answers).length < n) { toast('모든 문제의 답을 골라 주세요.'); return; }
+  const d = load();
+  const xpBefore = d.xp;
+  let score = 0, best = 0, run = 0, gained = 0;
+  const newlyGrad = [];
+  s.msgs = [];
+  s.items.forEach((it, i) => {
+    const ok = s.answers[i] === it.answer_index;
+    s.msgs[i] = ok ? pick1(PRAISE) : pick1(COMFORT);
+    gained += ok ? XP.correct : XP.wrong;
+    if (ok) { score++; run++; best = Math.max(best, run); } else run = 0;
+    if (s.mode === 'similar') return;
+    d.log.push({ at: Date.now(), ok, major: it.major, minor: it.minor });
+    const p = d.problems.find((x) => x.id === it.id);
+    if (!p) return;
+    if (ok) {
+      p.correctStreak++;
+      if (p.correctStreak >= 2 && !p.graduated) {
+        p.graduated = true;
+        gained += XP.graduate;
+        const emoji = STICKERS[d.stickers.length % STICKERS.length];
+        d.stickers.push({ id: p.id, emoji, major: p.major, at: Date.now() });
+        newlyGrad.push(emoji);
+      }
+    } else { p.correctStreak = 0; p.wrongCount++; }
+  });
+  if (s.mode === 'random') { d.sets.push({ date: today(), score, total: n, at: Date.now() }); gained += XP.randomSet; }
+  d.xp = xpBefore + gained;
+  if (gained > 0) d.xpLog.push({ at: Date.now(), xp: d.xp });
+  saveData(d);
+
+  const before = levelInfo(xpBefore), after = levelInfo(d.xp);
+  s.score = score; s.best = best; s.gained = gained; s.graded = true;
+  render();
+
+  if (after.lv > before.lv) {
+    const newGem = after.gem !== before.gem ? ` 새 보석 획득! ${after.gem.icon} ${after.gem.name}` : '';
+    toast(`🎉 레벨 업! Lv.${after.lv}${newGem}`);
+  } else if (newlyGrad.length) {
+    toast(`졸업! 스티커 ${newlyGrad.join(' ')} 를 받았어요`);
+  }
+}
+
+function finishSession() { state.session = null; go('notes'); }
+
+// ---------- 설정·연결 테스트·백업 ----------
+function saveKeys() {
+  store.set(KEY_KEYS, { gemini: $('key-gemini').value.trim() });
+  toast('이 기기에 저장되었습니다.');
+}
+
+async function testGemini() {
+  saveKeys();
+  if (!getKeys().gemini) { state.keyTest.gemini = '❌ 키를 입력해 주세요.'; render(); return; }
+  state.keyTest.gemini = '⏳ 확인 중... (잠시 기다려 주세요)'; render();
+  try {
+    const { model } = await geminiRequest({ contents: [{ parts: [{ text: '안녕이라고만 답하세요.' }] }] });
+    state.keyTest.gemini = `✅ 연결 성공 (사용 모델: ${model})`;
+  } catch (e) {
+    state.keyTest.gemini = '❌ ' + (e.message || '연결 실패');
+  }
+  render();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({ version: 3, data: load() }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'math-error-log-' + today() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+async function importData(file) {
+  try {
+    const j = JSON.parse(await file.text());
+    const src = j.data || j;
+    if (!Array.isArray(src.problems)) throw new Error('이 앱의 백업 파일이 아니에요.');
+    saveData({
+      problems: src.problems || [], sets: src.sets || [], stickers: src.stickers || [],
+      xp: Number(src.xp) || 0, log: src.log || [], xpLog: src.xpLog || [],
+    });
+    toast('불러왔어요.'); render();
+  } catch (e) { toast(e.message || '불러오기에 실패했어요.'); }
+}
+
+// 문제·기록·사진을 모두 지움 (API 키는 남김)
+async function resetAll() {
+  if (!confirm('오답, 기록, 스티커, 경험치, 사진을 모두 지울까요? (API 키는 남겨요)')) return;
+  if (!confirm('정말 지울까요? 되돌릴 수 없어요.')) return;
+  localStorage.removeItem(DATA_KEY);
+  const d = await imageDb();
+  d.transaction('img', 'readwrite').objectStore('img').clear();
+  state.session = null; state.uploadLog = []; state.pendingFiles = [];
+  go('status');
+  toast('모두 초기화했어요.');
+}
+
+// 캐릭터 칸에 넣을 그림/사진 (나중에 아이가 그린 그림도 같은 방식으로 저장)
+async function saveCharacter(file) {
+  try {
+    const b64 = await fileToJpegBase64(file, 400, 0.85);
+    await putImage('character', 'data:image/jpeg;base64,' + b64);
+    toast('캐릭터 칸에 넣었어요!');
+    render();
+  } catch (e) { toast(e.message || '사진을 넣지 못했어요.'); }
+}
+
+// ---------- 화면 공통 ----------
+const majorOptions = (selected) => MAJORS.map((m) => `<option value="${esc(m)}" ${m === selected ? 'selected' : ''}>${esc(m)}</option>`).join('');
+const ICON = { wait: '⏳', busy: '🔄', ok: '✅', err: '❌' };
+
+function problemCard(p) {
+  return `<article class="card ${p.graduated ? 'done' : ''}">
+    <div class="row"><span class="note">틀린 ${p.wrongCount}번 · 연속 정답 ${p.correctStreak}/2${p.graduated ? ' · 졸업 ✅' : ''}</span></div>
+    <img data-img="${p.id}" alt="문제 사진" hidden style="width:100%;border-radius:16px;margin:6px 0">
+    <p class="qtext">${esc(p.question)}</p>
+    <div class="row">
+      <button class="sm pri" data-action="retake" data-id="${p.id}">다시 풀기</button>
+      <button class="sm pri" data-action="similar-note" data-id="${p.id}">유사문제</button>
+      <select data-change="major" data-id="${p.id}">${majorOptions(p.major)}</select>
+      <button class="sm" data-action="rename-minor" data-id="${p.id}">중분류 수정</button>
+      <button class="sm" data-action="delete" data-id="${p.id}">삭제</button>
+    </div></article>`;
+}
+
+// ---------- 화면 ----------
+// 오답: 왼쪽은 유형 목록, 오른쪽은 고른 유형의 문제 (중분류별)
+function viewNotes() {
+  const d = load();
+  const grad = d.problems.filter((p) => p.graduated).length;
+  let html = `<h2>오답 노트</h2>
+    <p class="note">오답 ${d.problems.length}개 · 졸업 ${grad}개</p>`;
+  if (!d.problems.length) return html + `<p class="note">아직 저장된 오답이 없어요. "등록" 탭에서 사진을 올려 주세요.</p>`;
+  const counts = {};
+  MAJORS.forEach((m) => { counts[m] = d.problems.filter((p) => p.major === m).length; });
+  const sel = MAJORS.includes(state.selMajor) ? state.selMajor : (MAJORS.find((m) => counts[m]) || MAJORS[0]);
+
+  html += `<div class="cols notes-cols"><div class="col">`;
+  MAJORS.forEach((m) => {
+    const st = MAJOR_STYLE[m];
+    html += `<button class="major-btn ${m === sel ? 'on' : ''}" data-action="sel-major" data-major="${esc(m)}"><span class="acc-ico" style="background:${st.color}">${st.icon}</span><span class="major-name">${esc(m)}</span><span class="note">${counts[m]}개</span></button>`;
+  });
+  html += `</div><div class="col">`;
+  const items = d.problems.filter((p) => p.major === sel);
+  html += `<p class="cardtitle">${MAJOR_STYLE[sel].icon} ${esc(sel)} <span class="note">${items.length}개</span></p>`;
+  if (!items.length) html += `<p class="note">이 유형에는 아직 오답이 없어요.</p>`;
+  [...new Set(items.map((p) => p.minor))].forEach((mi) => {
+    const group = items.filter((p) => p.minor === mi).sort((a, b) => b.wrongCount - a.wrongCount);
+    html += `<div class="minor">${esc(mi)} (${group.length})</div>`;
+    group.forEach((p) => { html += problemCard(p); });
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function viewUpload() {
+  const n = state.pendingFiles.length, d = load();
+  let html = `<h2>오답 등록</h2>
+    <p class="note">여러 장을 고른 뒤 등록을 누르세요. 대분류와 중분류는 자동으로 나뉩니다. 사진은 밝고 선명하게 찍어 주세요.</p>
+    <input type="file" id="file-input" accept="image/*" multiple ${state.uploading ? 'disabled' : ''}>
+    ${n ? `<p class="note">선택한 사진 ${n}장</p>` : ''}
+    <button class="big" data-action="start-upload" ${n && !state.uploading ? '' : 'disabled'}>등록 (${n}장)</button>`;
+  if (state.uploadLog.length) {
+    html += `<div class="card"><strong>처리 결과</strong>`;
+    state.uploadLog.forEach((x) => {
+      html += `<div class="logline"><span>${ICON[x.state]}</span><div><div>${esc(x.name)}</div><div class="note">${esc(x.msg)}</div></div></div>`;
+    });
+    html += `</div>`;
+  }
+  const failed = state.uploadLog.filter((x) => x.state === 'err').length;
+  if (failed && !state.uploading) html += `<button class="big" data-action="retry-failed">실패한 ${failed}장 바로 재등록</button>`;
+  html += `<div class="card"><p class="note">이 기기에 저장된 오답: <strong>${d.problems.length}개</strong></p>
+    <button class="sm pri" data-go="notes">오답 탭에서 보기</button></div>`;
+  return html;
+}
+
+function viewRandom() {
+  const d = load();
+  let html = `<h2>평가</h2>`;
+  if (!d.problems.length) return html + `<p class="note">먼저 "등록"에서 오답을 올려 주세요.</p>`;
+  const sel = state.randomMajors ?? MAJORS;
+  const allOn = MAJORS.every((m) => sel.includes(m));
+  const pool = d.problems.filter((p) => !p.graduated && sel.includes(p.major)).length;
+  html += `<label class="chk"><input type="checkbox" data-all="1" ${allOn ? 'checked' : ''}> 전체</label>`;
+  MAJORS.forEach((m) => {
+    html += `<label class="chk"><input type="checkbox" data-major="${esc(m)}" ${sel.includes(m) ? 'checked' : ''}> ${MAJOR_STYLE[m].icon} ${esc(m)}</label>`;
+  });
+  html += `<label>문제 수 (3~30)<input type="number" min="3" max="30" value="${state.randomCount}" data-change="count"></label>
+    <p class="note">선택한 대분류에서 아직 졸업하지 않은 오답 ${pool}개 중에서 뽑습니다. 많이 틀린 문제가 더 자주 나오고, 대분류는 골고루 섞입니다.</p>
+    <button class="big" data-action="start-random" ${pool ? '' : 'disabled'}>평가 시작</button>`;
+  return html;
+}
+
+function scoreChart(sets) {
+  const pts = sets.map((r, i) => [sets.length === 1 ? 150 : 20 + i * (260 / (sets.length - 1)), 110 - (r.score / r.total) * 100]);
+  return `<svg viewBox="0 0 300 120" width="100%" role="img" aria-label="세트 점수 추이">
+    <polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="#f08a4b" stroke-width="3"/>
+    ${pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#f08a4b"/>`).join('')}</svg>`;
+}
+
+// 현황: 아이의 성장만 보여 줌 (다른 사람과 비교하는 요소 없음)
+function viewStatus() {
+  const d = load(), L = levelInfo(d.xp);
+  const total = d.problems.length, grad = d.problems.filter((p) => p.graduated).length;
+  const pct = L.next ? Math.round((L.xp - L.base) / (L.next - L.base) * 100) : 100;
+  const gradPct = total ? Math.round(grad / total * 100) : 0;
+  const weekDone = d.log.filter((x) => Date.now() - x.at < 7 * 864e5).length;
+  const dateStr = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+
+  // 성장 곡선: 누적 경험치 변화
+  const xs = d.xpLog.slice(-40);
+  let growth = `<p class="note">풀이를 시작하면 성장 곡선이 그려져요.</p>`;
+  if (xs.length >= 2) {
+    const max = Math.max(...xs.map((x) => x.xp), 1);
+    const pts = xs.map((x, i) => [10 + i * (280 / (xs.length - 1)), 130 - (x.xp / max) * 115]);
+    const line = pts.map((p) => p.join(',')).join(' ');
+    const area = `10,140 ${line} ${pts[pts.length - 1][0]},140`;
+    growth = `<svg viewBox="0 0 300 150" width="100%" role="img" aria-label="경험치 성장 곡선">
+      <polygon points="${area}" fill="#ffe6a8" opacity=".7"/>
+      <polyline points="${line}" fill="none" stroke="#f08a4b" stroke-width="3.5" stroke-linejoin="round"/>
+      ${pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#fff" stroke="#f08a4b" stroke-width="2.5"/>`).join('')}</svg>
+      <p class="note">누적 ${d.xp} XP · 최근 ${xs.length}번 기록</p>`;
+  }
+
+  // 주별 풀이 수 (막대)
+  const weeks = {};
+  d.log.forEach((x) => { const k = weekKey(x.at); weeks[k] = (weeks[k] || 0) + 1; });
+  const wk = Object.keys(weeks).sort().slice(-6);
+  let weekly = `<p class="note">아직 풀이 기록이 없어요.</p>`;
+  if (wk.length) {
+    const max = Math.max(...wk.map((k) => weeks[k]), 1);
+    weekly = `<div class="weekbars">${wk.map((k) => {
+      const v = weeks[k], h = Math.max(6, Math.round(v / max * 110));
+      return `<div class="wb"><b>${v}</b><i style="height:${h}px"></i><small>${esc(k.slice(5))}</small></div>`;
+    }).join('')}</div>`;
+  }
+
+  // 유형별 정답률 (대분류, 색깔 아이콘)
+  let acc = '';
+  MAJORS.forEach((m) => {
+    const rows = d.log.filter((x) => x.major === m);
+    if (!rows.length) return;
+    const ok = rows.filter((x) => x.ok).length, p = Math.round(ok / rows.length * 100);
+    const st = MAJOR_STYLE[m];
+    acc += `<div class="acc-row"><span class="acc-ico" style="background:${st.color}">${st.icon}</span>
+      <div class="acc-body"><div class="row"><strong>${esc(m)}</strong><span class="note">${p}% · ${ok}/${rows.length}</span></div>
+      <div class="bar"><div style="width:${p}%;background:${st.color}"></div></div></div></div>`;
+  });
+  if (!acc) acc = `<p class="note">아직 풀이 기록이 없어요.</p>`;
+
+  // 최근 스티커 (스티커 보드)
+  const recent = d.stickers.slice(-12);
+  const stickerBoard = recent.length
+    ? `<div class="stick">${recent.map((s) => `<span>${s.emoji}</span>`).join('')}</div><p class="note">모은 스티커 ${d.stickers.length}개</p>`
+    : `<p class="note">문제를 졸업하면 스티커가 여기에 모여요.</p>`;
+
+  const greet = weekDone ? `이번 주에 ${weekDone}개를 해냈어요! 🌟` : '오늘 첫 문제를 풀어 볼까요? 🌱';
+
+  return `<p class="greet">${greet}</p>
+    <div class="cols"><div class="col">
+    <label class="card char" for="char-input"><img data-img="character" alt="캐릭터" hidden><div class="ph">🎨 나의 캐릭터 칸<br>탭해서 그림이나 사진을 넣어요</div></label>
+    <input type="file" id="char-input" accept="image/*" hidden>
+    </div>
+    <div class="col">
+    <section class="hero">
+      <div class="hero-avatar">${L.gem.icon}</div>
+      <div class="hero-info">
+        <p class="hero-date">${dateStr}</p>
+        <p class="hero-title">${L.gem.name} <span>Lv.${L.lv}</span></p>
+        <div class="xp-bar"><div style="width:${pct}%"></div></div>
+        <p class="note">${L.next ? `다음 레벨까지 ${L.next - L.xp} XP` : '최고 레벨 달성! 👑'} · 총 ${L.xp} XP</p>
+      </div>
+    </section>
+    <section class="kpis">
+      <div class="kpi k1"><b>${grad}/${total}</b><span>🎓 졸업</span></div>
+      <div class="kpi k2"><b>${d.log.length}</b><span>✏️ 누적 풀이</span></div>
+      <div class="kpi k3"><b>${weekDone}</b><span>🗓️ 최근 7일</span></div>
+    </section>
+    <div class="bar" style="margin:6px 2px 0"><div style="width:${gradPct}%"></div></div>
+    <p class="note" style="margin:6px 2px">졸업 진행률 ${gradPct}%</p>
+    </div></div>
+    <div class="cols">
+    <div class="col">
+      <section class="card"><p class="cardtitle">📈 성장 곡선</p>${growth}</section>
+      <section class="card"><p class="cardtitle">🎯 유형별 정답률</p>${acc}</section>
+    </div>
+    <div class="col">
+      <section class="card"><p class="cardtitle">🗓️ 주별 풀이 수</p>${weekly}</section>
+      <section class="card"><p class="cardtitle">⭐ 스티커 보드</p>${stickerBoard}</section>
+    </div></div>`;
+}
+
+function viewSession() {
+  const s = state.session;
+  if (!s) return `<h2>풀이</h2><p class="note">진행 중인 풀이가 없어요.</p><button class="big" data-go="notes">오답 노트로</button>`;
+  const title = { retake: '다시 풀기', random: '평가', similar: '유사문제' }[s.mode];
+  let html = `<button class="sm" data-action="back-notes">← 오답 목록으로</button><h2>${title}</h2>`;
+  if (s.graded) {
+    html += `<div class="card"><p class="verdict">점수 ${s.score} / ${s.items.length}</p>
+      <p class="verdict">+${s.gained} XP 획득 ✨</p>
+      ${s.best >= 2 ? `<p class="verdict">🔥 최고 연속 정답 ${s.best}개</p>` : ''}
+      <p class="note">${s.mode === 'similar' ? '유사문제는 오답 기록에 반영되지 않아요.' : '틀린 횟수와 졸업 상태가 오답 노트에 반영되었어요.'}</p></div>`;
+  }
+  s.items.forEach((it, i) => {
+    const pick = s.answers[i];
+    html += `<section class="q"><p class="note">${i + 1}번 · ${esc(it.major || '')} > ${esc(it.minor || '')}</p>${(it.imgId || s.mode !== 'similar') ? `<img data-img="${it.imgId || it.id}" alt="문제 사진" hidden style="width:100%;border-radius:16px;margin:6px 0">` : ''}<p class="qtext">${esc(it.question)}</p>${(it.figChanges || []).length ? `<div class="card"><p class="note">그림 속 바뀐 값</p>${it.figChanges.map((c) => `<p class="verdict">${esc(c)}</p>`).join('')}</div>` : ''}`;
+    (it.choices || []).forEach((c, ci) => {
+      let cls = 'choice';
+      if (pick === ci) cls += ' sel';
+      if (s.graded) { if (ci === it.answer_index) cls += ' right'; else if (pick === ci) cls += ' wrong'; }
+      html += `<button class="${cls}" data-action="pick" data-i="${i}" data-c="${ci}" ${s.graded ? 'disabled' : ''}>${esc(c)}</button>`;
+    });
+    if (s.graded) {
+      const ok = pick === it.answer_index;
+      if (it.verify === 'check' && it.verifiedBy !== 'book') html += `<p class="note">⚠️ 이 정답은 AI 풀이와 달라서 아직 확인이 필요해요. 책 해답과 비교해 주세요.</p>`;
+      html += `<p class="verdict">${ok ? '정답이에요!' : '아쉬워요.'}</p>
+        <p class="note">${esc(s.msgs[i])}</p>
+        <button class="sm" data-action="explain" data-i="${i}">해설 ${s.open[i] ? '접기' : '펼치기'}</button>`;
+      if (s.open[i]) html += `<div class="explain">${esc(it.summary ? it.summary + '\n\n' : '')}${esc(it.explanation)}</div>`;
+      if (s.mode === 'retake') html += ` <button class="sm pri" data-action="similar" data-i="${i}">유사문제</button>`;
+    } else {
+      const shown = s.hints[i] || 0, total = (it.hints || []).length;
+      html += `<button class="sm" data-action="hint" data-i="${i}" ${shown >= total ? 'disabled' : ''}>힌트 ${shown}/${total}</button>`;
+      for (let h = 0; h < shown; h++) html += `<p class="note">힌트 ${h + 1}: ${esc(it.hints[h])}</p>`;
+    }
+    html += `</section>`;
+  });
+  const nx = s.mode === 'retake' ? nextSameMajor(s.items[0].id) : null;
+  if (s.graded) {
+    if (nx) html += `<button class="big" data-action="next-problem" data-id="${nx.id}">다음 문제 (${esc(nx.minor)}) →</button>`;
+    html += `<button class="big" data-action="back-notes" style="background:#fff;color:var(--ink);box-shadow:0 5px 0 #eadbbb">오답 목록으로</button>`;
+  } else {
+    html += `<button class="big" data-action="grade">채점하기</button>`;
+    if (nx) html += `<button class="sm" data-action="next-problem" data-id="${nx.id}" style="width:100%;margin-top:4px">건너뛰고 다음 문제 →</button>`;
+  }
+  return html;
+}
+
+function viewRecords() {
+  const d = load(), L = levelInfo(d.xp);
+  const sorted = [...d.sets].sort((a, b) => a.at - b.at);
+  let html = `<h2>스티커와 세트 기록</h2>
+    <div class="card"><span class="level">${L.gem.icon} ${L.gem.name} Lv.${L.lv}</span> <span class="note">· 총 ${L.xp} XP</span></div>`;
+  if (!d.stickers.length) html += `<p class="note">문제를 졸업하면 스티커를 받아요.</p>`;
+  else {
+    const counts = {};
+    d.stickers.forEach((s) => { counts[s.emoji] = (counts[s.emoji] || 0) + 1; });
+    html += `<div class="card stickers">${Object.entries(counts).map(([e, c]) => `<span>${e}<small>× ${c}</small></span>`).join('')}</div>`;
+  }
+  if (sorted.length >= 2) html += `<div class="card"><p class="note">점수 추이 (정답률)</p>${scoreChart(sorted)}</div>`;
+  if (!sorted.length) html += `<p class="note">아직 완료한 평가가 없어요.</p>`;
+  [...sorted].reverse().forEach((r) => {
+    html += `<div class="card"><div class="row"><span>${esc(r.date)}</span><strong>${r.score} / ${r.total}</strong></div></div>`;
+  });
+  html += `<h2>백업</h2>
+    <p class="note">오답, 기록, 스티커, 경험치를 파일로 내보내거나 불러올 수 있어요. API 키와 문제 사진은 포함되지 않습니다(사진은 이 기기에만 저장됩니다).</p>
+    <button class="big" data-action="export">파일로 내보내기</button>
+    <label>불러오기 (파일 선택)<input type="file" id="import-file" accept="application/json"></label>`;
+  return html;
+}
+
+function viewSettings() {
+  const k = getKeys();
+  return `<h2>API 키 설정</h2>
+    <p class="note">키는 이 기기 브라우저에만 저장되며 외부 서버로 보내지 않습니다.</p>
+    <label>Gemini 키<input id="key-gemini" type="password" autocomplete="off" value="${esc(k.gemini)}"></label>
+    <div class="row"><button class="sm pri" data-action="test-gemini">저장 후 Gemini 연결 테스트</button></div>
+    <p class="note">${esc(state.keyTest.gemini)}</p>
+    <button class="big" data-action="save-keys">저장만 하기</button>
+    <h2>데이터 초기화</h2>
+    <p class="note">오답, 기록, 스티커, 경험치, 사진이 모두 지워집니다. API 키는 남아요.</p>
+    <button class="big" data-action="reset" style="background:#d9534f;box-shadow:0 5px 0 #a93c36">모두 초기화</button>`;
+}
+
+const VIEWS = { status: viewStatus, notes: viewNotes, upload: viewUpload, random: viewRandom, session: viewSession, records: viewRecords, settings: viewSettings };
+
+function render() {
+  $('app').innerHTML = VIEWS[state.view]();
+  loadImages();
+  // $...$ 안의 수식을 KaTeX로 그림 (라이브러리 로딩 전이면 글자 그대로 보임)
+  if (window.renderMathInElement) {
+    renderMathInElement($('app'), { delimiters: [{ left: '$', right: '$', display: false }], throwOnError: false, ignoredTags: ['script', 'style', 'textarea', 'pre', 'code'] });
+  }
+  document.querySelectorAll('nav .tab').forEach((b) => b.classList.toggle('on', b.dataset.go === state.view));
+}
+function go(v) { state.view = v; render(); window.scrollTo(0, 0); }
+
+// ---------- 이벤트 ----------
+document.addEventListener('click', async (e) => {
+  const nav = e.target.closest('[data-go]');
+  if (nav) { go(nav.dataset.go); return; }
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  const a = b.dataset.action, i = Number(b.dataset.i), s = state.session;
+  switch (a) {
+    case 'retake': startRetake(b.dataset.id); break;
+    case 'delete': deleteProblem(b.dataset.id); break;
+    case 'rename-minor': renameMinor(b.dataset.id); break;
+    case 'start-upload': await startUpload(); break;
+    case 'retry-failed': {
+      // 실패한 사진만 같은 화면에서 다시 등록
+      state.pendingFiles = state.uploadLog.filter((x) => x.state === 'err').map((x) => x.file);
+      if (state.pendingFiles.length) await startUpload();
+      break;
+    }
+    case 'start-random': startRandom(); break;
+    case 'sel-major': state.selMajor = b.dataset.major; render(); break;
+    case 'pick': if (s && !s.graded) { s.answers[i] = Number(b.dataset.c); render(); } break;
+    case 'hint': if (s) { s.hints[i] = (s.hints[i] || 0) + 1; render(); } break;
+    case 'explain': if (s) { s.open[i] = !s.open[i]; render(); } break;
+    case 'grade': gradeSession(); break;
+    case 'similar': await startSimilar(i); break;
+    case 'similar-note': { const p = load().problems.find((x) => x.id === b.dataset.id); if (p) await makeSimilar(p); break; }
+    case 'finish': finishSession(); break;
+    case 'back-notes': state.session = null; go('notes'); break;
+    case 'next-problem': startRetake(b.dataset.id); break;
+    case 'save-keys': saveKeys(); break;
+    case 'test-gemini': await testGemini(); break;
+    case 'export': exportData(); break;
+    case 'reset': await resetAll(); break;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.id === 'char-input') { if (t.files[0]) saveCharacter(t.files[0]); return; }
+  if (t.id === 'file-input') {
+    state.pendingFiles = [...t.files];
+    state.uploadLog = [];
+    render();
+  }
+  else if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
+  else if (t.dataset.change === 'major') setMajor(t.dataset.id, t.value);
+  else if (t.dataset.change === 'count') { state.randomCount = Math.min(30, Math.max(3, Number(t.value) || 10)); render(); }
+  else if (t.dataset.all !== undefined) { state.randomMajors = t.checked ? [...MAJORS] : []; render(); }
+  else if (t.dataset.major !== undefined) {
+    const cur = new Set(state.randomMajors ?? MAJORS);
+    t.checked ? cur.add(t.dataset.major) : cur.delete(t.dataset.major);
+    state.randomMajors = [...cur]; render();
+  }
+});
+
+// 유형을 펼치고 접은 상태를 기억 (다시 그려도 펼친 유형이 유지됨)
+document.addEventListener('toggle', (e) => {
+  const el = e.target;
+  if (el.matches && el.matches('details[data-major]')) {
+    el.open ? state.openMajors.add(el.dataset.major) : state.openMajors.delete(el.dataset.major);
+  }
+}, true);
+
+render();
+// 수식 라이브러리는 비동기로 불러오므로, 로딩이 끝나면 한 번 더 그립니다
+window.addEventListener('load', render);
+</script>
+</body>
+</html>
